@@ -87,7 +87,7 @@ p `chainl1` op = do
 char :: Char -> Parser Char
 char c = satisfy (c ==)
 
-natural :: Parser Integer
+natural :: Parser Int
 natural = read <$> some (satisfy isDigit)
 
 string :: String -> Parser String
@@ -111,6 +111,11 @@ spaces = many $ oneOf " \n\r"
 
 digit :: Parser Char
 digit = satisfy isDigit
+
+singleDigitInt :: Parser Int
+singleDigitInt = do
+  i <- digit
+  return (read $ [i])
 
 number :: Parser Int
 number = do
