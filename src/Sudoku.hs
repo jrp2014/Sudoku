@@ -10,7 +10,6 @@ import Data.Monoid
 import Data.Traversable
 import NanoParsec
 
-import FunctorCombo.DHoley
 import FunctorCombo.Functor
 
 import Data.Functor (($>))
@@ -26,27 +25,27 @@ type Zone = Triple :. Triple
 zone :: Zone Char
 zone = O (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'i'))
 
-type Board = Zone :. Zone
+type Grid = Zone :. Zone
 
-rows :: Board a -> Board a
+rows :: Grid a -> Grid a
 rows = id
 
-cols :: Board a -> Board a
+cols :: Grid a -> Grid a
 cols = O . sequenceA . unO
 
-boxes :: Board a -> Board a
---boxBoard = newly (fmap O . newly (fmap sequenceA) . fmap unO)
-boxes = O . fmap O . O . fmap sequenceA . unO . fmap unO . unO
+boxs :: Grid a -> Grid a
+--boxGrid = newly (fmap O . newly (fmap sequenceA) . fmap unO)
+boxs = O . fmap O . O . fmap sequenceA . unO . fmap unO . unO
 
 -- We can use Nothing, or 0 to represent unsolved values ...
-type Cell = Maybe Int
+type Value = Char
 
-pboard :: Parser (Board Cell)
+pboard :: Parser (Grid Value)
 pboard = sequenceA (pure pcell)
 
-pcell :: Parser Cell
+pcell :: Parser Value
 pcell =
-  spaces *> ((Just <$> singleDigitInt) <|> (char '.' $> Nothing)) <* spaces
+  spaces *> ( digit <|> (char '.' $> '0')) <* spaces
 
 -- TODO: Put this into the test suite
 tryThis :: String
@@ -63,15 +62,16 @@ tryThis =
     , "..3.62..."
     ]
 
+test1 :: [Value]
+test1 = flatten . fst . head $ parse pboard tryThis
+
+test2 = valid . fst . head $ parse pboard tryThis
+
+
+
 -- Newtype coercion
 newly :: (g1 (f1 a1) -> g2 (f2 a2)) -> (:.) g1 f1 a1 -> (:.) g2 f2 a2
 newly f = O . f . unO
-
-xpBoard :: Board Cell -> Board Cell
-xpBoard = newly sequenceA
-
-boxBoard :: Board Cell -> Board Cell
-boxBoard = newly (fmap O . newly (fmap sequenceA) . fmap unO)
 
 ---------------
 --
@@ -87,9 +87,16 @@ reduce = crush id
 flatten :: (Traversable f) => f a -> [a]
 flatten = crush (: [])
 
---elem :: (Eq a, Traversable t) => a -> t a -> Bool
---elem = any . (==)
-complete :: Board Int -> Bool
+complete :: Grid Int -> Bool
 complete = all (`elem` [1 .. 9])
 
-type DBoard = Der Board
+valid :: Eq a => Grid a -> Bool
+valid t = all (\f ->  nodups $ f t) [rows, cols, boxs]
+
+nodups :: (Eq a, Foldable f) => f a -> Bool
+nodups l = foldr test end l []
+  where
+    test :: Eq a => a -> ([a] -> Bool) -> [a] -> Bool
+    test a cont seen = (a `elem` seen) || cont (a : seen)
+    end :: [a] -> Bool
+    end = const False
