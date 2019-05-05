@@ -14,6 +14,7 @@ import FunctorCombo.Functor
 
 import Data.Functor (($>))
 
+-- Basic declarations
 type Triple = Id :*: Id :*: Id
 
 pattern Tr :: a -> a -> a -> (:*:) (Id :*: Id) Id a
@@ -25,27 +26,41 @@ type Zone = Triple :. Triple
 zone :: Zone Char
 zone = O (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'i'))
 
-type Grid = Zone :. Zone
+type Grid = Matrix Value
 
-rows :: Grid a -> Grid a
-rows = id
+type Matrix = Zone :. Zone
 
-cols :: Grid a -> Grid a
-cols = O . sequenceA . unO
-
-boxs :: Grid a -> Grid a
---boxGrid = newly (fmap O . newly (fmap sequenceA) . fmap unO)
-boxs = O . fmap O . O . fmap sequenceA . unO . fmap unO . unO
-
--- We can use Nothing, or 0 to represent unsolved values ...
 type Value = Char
 
-pboard :: Parser (Grid Value)
+-- Basic definitions
+values :: [Value]
+values = ['1' .. '9']
+
+-- Some format use 0, others '.', for blanks
+blank :: Value -> Bool
+blank x = x == '0' || x == '.'
+
+single :: [a] -> Bool
+single [_] = True
+single _ = False
+
+-- Extracting rows, columns and boxes
+rows :: Matrix a -> Matrix a
+rows = id
+
+cols :: Matrix a -> Matrix a
+cols = O . sequenceA . unO
+
+boxs :: Matrix a -> Matrix a
+--boxMatrix = newly (fmap O . newly (fmap sequenceA) . fmap unO)
+boxs = O . fmap O . O . fmap sequenceA . unO . fmap unO . unO
+
+-- Parsing 
+pboard :: Parser (Grid)
 pboard = sequenceA (pure pcell)
 
 pcell :: Parser Value
-pcell =
-  spaces *> ( digit <|> (char '.' $> '0')) <* spaces
+pcell = spaces *> (digit <|> (char '.' $> '0')) <* spaces
 
 -- TODO: Put this into the test suite
 tryThis :: String
@@ -65,9 +80,8 @@ tryThis =
 test1 :: [Value]
 test1 = flatten . fst . head $ parse pboard tryThis
 
+test2 :: Bool
 test2 = valid . fst . head $ parse pboard tryThis
-
-
 
 -- Newtype coercion
 newly :: (g1 (f1 a1) -> g2 (f2 a2)) -> (:.) g1 f1 a1 -> (:.) g2 f2 a2
@@ -87,12 +101,14 @@ reduce = crush id
 flatten :: (Traversable f) => f a -> [a]
 flatten = crush (: [])
 
-complete :: Grid Int -> Bool
+-- Validity checking
+complete :: Matrix Int -> Bool
 complete = all (`elem` [1 .. 9])
 
-valid :: Eq a => Grid a -> Bool
-valid t = all (\f ->  nodups $ f t) [rows, cols, boxs]
+valid :: Eq a => Matrix a -> Bool
+valid t = all (\f -> nodups $ f t) [rows, cols, boxs]
 
+-- TODO: is this the best we can do?
 nodups :: (Eq a, Foldable f) => f a -> Bool
 nodups l = foldr test end l []
   where
@@ -100,3 +116,24 @@ nodups l = foldr test end l []
     test a cont seen = (a `elem` seen) || cont (a : seen)
     end :: [a] -> Bool
     end = const False
+
+-- A basic solver
+type Choices = [Value]
+
+choices :: Grid -> Matrix Choices
+choices = fmap choice
+  where
+    choice v =
+      if blank v
+        then values
+        else [v]
+
+-- Turn a grid of choices to a list of grids
+cp :: Matrix Choices -> [Grid]
+cp = sequenceA
+
+collapse :: Matrix [a] -> [Matrix a]
+collapse = sequenceA
+
+solve :: Grid -> [Grid]
+solve = filter valid . collapse . choices
