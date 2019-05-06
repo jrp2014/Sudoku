@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Sudoku where
 
@@ -8,11 +9,13 @@ import Control.Monad
 import Data.Char
 import Data.Monoid
 import Data.Traversable
+import Data.Foldable
 import NanoParsec
 
 import FunctorCombo.Functor
 
 import Data.Functor (($>))
+import Data.List
 
 -- Basic declarations
 type Triple = Id :*: Id :*: Id
@@ -21,14 +24,14 @@ pattern Tr :: a -> a -> a -> (:*:) (Id :*: Id) Id a
 
 pattern Tr a b c = (Id a :*: Id b) :*: Id c
 
-type Zone = Triple :. Triple
+type Row = Triple :. Triple
 
-zone :: Zone Char
+zone :: Row Char
 zone = O (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'i'))
 
 type Grid = Matrix Value
 
-type Matrix = Zone :. Zone
+type Matrix = Row :. Row
 
 type Value = Char
 
@@ -56,7 +59,7 @@ boxs :: Matrix a -> Matrix a
 boxs = O . fmap O . O . fmap sequenceA . unO . fmap unO . unO
 
 -- Parsing 
-pboard :: Parser (Grid)
+pboard :: Parser Grid
 pboard = sequenceA (pure pcell)
 
 pcell :: Parser Value
@@ -81,7 +84,7 @@ test1 :: [Value]
 test1 = flatten . fst . head $ parse pboard tryThis
 
 test2 :: Bool
-test2 = valid . fst . head $ parse pboard tryThis
+test2 = safe . fst . head $ parse pboard tryThis
 
 -- Newtype coercion
 newly :: (g1 (f1 a1) -> g2 (f2 a2)) -> (:.) g1 f1 a1 -> (:.) g2 f2 a2
@@ -100,13 +103,6 @@ reduce = crush id
 
 flatten :: (Traversable f) => f a -> [a]
 flatten = crush (: [])
-
--- Validity checking
-complete :: Matrix Int -> Bool
-complete = all (`elem` [1 .. 9])
-
-valid :: Eq a => Matrix a -> Bool
-valid t = all (\f -> nodups $ f t) [rows, cols, boxs]
 
 -- TODO: is this the best we can do?
 nodups :: (Eq a, Foldable f) => f a -> Bool
@@ -136,4 +132,72 @@ collapse :: Matrix [a] -> [Matrix a]
 collapse = sequenceA
 
 solve :: Grid -> [Grid]
-solve = filter valid . collapse . choices
+solve = filter safe . collapse . choices
+
+-- Pruning the search space
+prune :: Matrix Choices -> Matrix Choices
+prune = pruneBy boxs . pruneBy cols . pruneBy rows
+  where
+    pruneBy f = f . newly (fmap thin) . f
+
+thin :: Row Choices -> Row Choices
+thin xss = fmap (`minus` singles) xss
+  where
+    singles :: Choices
+    singles =
+      foldMap
+        (\a ->
+           if single a
+             then a
+             else mempty)
+        xss
+
+minus :: Choices -> Choices -> Choices
+xs `minus` ys =
+  if single xs
+    then xs
+    else xs \\ ys
+
+-- Repeatedly pruning
+fix :: Eq a => (a -> a) -> a -> a
+fix f x =
+  if x == x'
+    then x
+    else fix f x'
+  where
+    x' = f x
+
+-- Properties of Matrixes
+-- Validity checking
+complete :: Matrix Choices -> Bool
+complete = all single
+
+void :: Matrix Choices -> Bool
+void = any null
+
+safe :: Eq a => Matrix a -> Bool
+safe t = all (\f -> nodups $ f t) [rows, cols, boxs]
+
+valid :: Grid -> Bool
+valid = safe
+
+blocked :: Matrix Choices -> Bool
+blocked m = Sudoku.void m || not (safe m)
+
+-- Makng choices one at a time
+solve4 :: Grid -> [Grid]
+solve4 = search . prune . choices
+
+search :: Matrix Choices -> [Grid]
+search m
+  | blocked m = []
+  | complete m = collapse m
+  | otherwise = [g | m' <- expand m, g <- search (prune m')]
+
+expand = undefined
+
+counts :: Row Choices -> Row Int
+counts = fmap length
+
+n :: Row Int -> Int
+n = minimum
