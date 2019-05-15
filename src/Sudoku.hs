@@ -7,9 +7,9 @@ module Sudoku where
 import Control.Applicative
 import Control.Monad
 import Data.Char
+import Data.Foldable
 import Data.Monoid
 import Data.Traversable
-import Data.Foldable
 import NanoParsec
 
 import FunctorCombo.Functor
@@ -27,7 +27,7 @@ pattern Tr a b c = (Id a :*: Id b) :*: Id c
 type Row = Triple :. Triple
 
 zone :: Row Char
-zone = O (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'i'))
+zone = O (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'a'))
 
 type Grid = Matrix Value
 
@@ -112,6 +112,14 @@ nodups l = foldr test end l []
     test a cont seen = (a `elem` seen) || cont (a : seen)
     end :: [a] -> Bool
     end = const False
+
+duplicates :: (Traversable f, Eq a) => f a -> [a]
+duplicates s = reduce $ snd $ mapAccumL gather [] s
+  where
+    gather seen current =
+      if current `elem` seen
+        then (seen, [current])
+        else (current : seen, [])
 
 -- A basic solver
 type Choices = [Value]
