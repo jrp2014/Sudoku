@@ -29,11 +29,32 @@ type Row = Triple :. Triple
 zone :: Row Char
 zone = O (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'a'))
 
+zone2 :: Row [Value]
+zone2 = O (Tr (Tr "ab" "bc" "c") (Tr "d" "e" "f") (Tr "g" "h" "ab"))
+
 type Grid = Matrix Value
 
 type Matrix = Row :. Row
 
 type Value = Char
+
+showValue :: Value -> Char
+showValue = id
+
+showCell :: [Value] -> String
+showCell vs = '[' : vs ++ replicate (9 - length vs) ' ' ++ "]"
+
+showTriple :: Triple [Value] -> String
+showTriple (Tr a b c) = showCell a ++ showCell b ++ showCell c
+
+showRow :: Row [Value] -> String
+showRow (O (Tr a b c)) = showTriple a ++ showTriple b ++ showTriple c
+
+showMatrix :: Matrix [Value] -> String
+showMatrix = undefined
+
+-- putStrLn $ unlines $ fmap showRow $ sequenceA $ (fmap.fmap) (:[]) zone2
+--
 
 -- Basic definitions
 values :: [Value]
