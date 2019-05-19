@@ -38,24 +38,29 @@ type Matrix = Row :. Row
 
 type Value = Char
 
+type Choices = [Value]
+
 showValue :: Value -> Char
 showValue = id
 
-showCell :: [Value] -> String
+showCell :: Choices -> String
 showCell vs = '[' : vs ++ replicate (9 - length vs) ' ' ++ "]"
 
 showTriple :: Triple [Value] -> String
 showTriple (Tr a b c) = showCell a ++ showCell b ++ showCell c
 
-showRow :: Row [Value] -> String
-showRow (O (Tr a b c)) = showTriple a ++ showTriple b ++ showTriple c
+showRow :: Row Choices -> String
+showRow (O (Tr a b c)) = showTriple a ++ showTriple b ++ showTriple c ++ "\n"
 
-showMatrix :: Matrix [Value] -> String
-showMatrix = undefined
+showMatrix :: Matrix Choices -> String
+showMatrix = foldMap showCell
+
+showMatrix' :: Matrix Choices -> String
+showMatrix'  (O rs ) = foldMap showRow rs
+
 
 -- putStrLn $ unlines $ fmap showRow $ sequenceA $ (fmap.fmap) (:[]) zone2
 --
-
 -- Basic definitions
 values :: [Value]
 values = ['1' .. '9']
@@ -107,6 +112,10 @@ test1 = flatten . fst . head $ parse pboard tryThis
 test2 :: Bool
 test2 = safe . fst . head $ parse pboard tryThis
 
+test3 = showMatrix . choices . fst . head $ parse pboard tryThis
+
+test4 = putStrLn . showMatrix' . choices . fst . head $ parse pboard tryThis
+
 -- Newtype coercion
 newly :: (g1 (f1 a1) -> g2 (f2 a2)) -> (:.) g1 f1 a1 -> (:.) g2 f2 a2
 newly f = O . f . unO
@@ -143,7 +152,6 @@ duplicates s = reduce $ snd $ mapAccumL gather [] s
         else (current : seen, [])
 
 -- A basic solver
-type Choices = [Value]
 
 choices :: Grid -> Matrix Choices
 choices = fmap choice
