@@ -166,10 +166,10 @@ cp :: Matrix Choices -> [Grid]
 cp = sequenceA
 
 collapse :: Matrix [a] -> [Matrix a]
-collapse = sequenceA
+collapse = sequenceA -- could be just collapse
 
 solve :: Grid -> [Grid]
-solve = filter safe . collapse . choices
+solve = filter valid . collapse . choices
 
 -- Pruning the search space
 prune :: Matrix Choices -> Matrix Choices
