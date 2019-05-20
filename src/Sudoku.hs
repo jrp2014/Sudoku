@@ -44,7 +44,17 @@ showValue :: Value -> Char
 showValue = id
 
 showCell :: Choices -> String
-showCell vs = '[' : vs ++ replicate (9 - length vs) ' ' ++ "]"
+--showCell vs = '[' : vs ++ replicate (9 - length vs) ' ' ++ "]"
+showCell xs =
+  (++ "]") .
+  Data.List.foldl'
+    (\acc x ->
+       acc ++
+       if x `elem` xs
+         then [x]
+         else " ")
+    "[" $
+  ['1' .. '9']
 
 showTriple :: Triple [Value] -> String
 showTriple (Tr a b c) = showCell a ++ showCell b ++ showCell c
@@ -56,8 +66,7 @@ showMatrix :: Matrix Choices -> String
 showMatrix = foldMap showCell
 
 showMatrix' :: Matrix Choices -> String
-showMatrix'  (O rs ) = foldMap showRow rs
-
+showMatrix' (O rs) = foldMap showRow rs
 
 -- putStrLn $ unlines $ fmap showRow $ sequenceA $ (fmap.fmap) (:[]) zone2
 --
@@ -114,7 +123,9 @@ test2 = safe . fst . head $ parse pboard tryThis
 
 test3 = showMatrix . choices . fst . head $ parse pboard tryThis
 
-test4 = putStrLn . showMatrix' . choices . fst . head $ parse pboard tryThis
+test4 =
+  putStrLn . showMatrix' . prune . prune . choices . fst . head $
+  parse pboard tryThis
 
 -- Newtype coercion
 newly :: (g1 (f1 a1) -> g2 (f2 a2)) -> (:.) g1 f1 a1 -> (:.) g2 f2 a2
@@ -152,7 +163,6 @@ duplicates s = reduce $ snd $ mapAccumL gather [] s
         else (current : seen, [])
 
 -- A basic solver
-
 choices :: Grid -> Matrix Choices
 choices = fmap choice
   where
