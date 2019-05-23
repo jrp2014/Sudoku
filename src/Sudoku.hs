@@ -5,6 +5,7 @@
 module Sudoku where
 
 import Control.Applicative
+import Data.Monoid
 import Data.Traversable
 import NanoParsec
 
@@ -17,8 +18,8 @@ import Data.List
 type Triple = Id :*: Id :*: Id
 
 pattern Tr :: a -> a -> a -> (:*:) (Id :*: Id) Id a
-
 pattern Tr a b c = (Id a :*: Id b) :*: Id c
+
 
 type Row = Triple :. Triple
 
@@ -72,6 +73,14 @@ single :: [a] -> Bool
 single [_] = True
 single _ = False
 
+pair :: [a] -> Bool
+pair [_, _] = True
+pair _ = False
+
+treble :: [a] -> Bool
+treble [_, _, _] = True
+treble _ = False
+
 -- Extracting rows, columns and boxes
 rows :: Matrix a -> Matrix a
 rows = id
@@ -112,9 +121,6 @@ reduce = crush id
 flatten :: (Traversable f) => f a -> [a]
 flatten = crush (: [])
 
-valid :: Grid -> Bool
-valid g = all (\f -> nodups $ f g) [rows, cols, boxs]
-
 -- TODO: is this the best we can do?
 duplicates' :: (Eq a, Foldable f) => f a -> Bool
 duplicates' l = foldr test end l []
@@ -125,7 +131,7 @@ duplicates' l = foldr test end l []
     end = const False
 
 duplicates :: (Traversable f, Eq a) => f a -> [a]
-duplicates s = reduce $ snd $ mapAccumL gather [] s
+duplicates s = nub . reduce . snd $ mapAccumL gather [] s
   where
     gather seen current =
       if current `elem` seen
@@ -144,6 +150,15 @@ choices = fmap choice
         then values
         else [v]
 
+occurrences :: Foldable f => Choices -> f Choices -> Int
+occurrences cs =
+  sum .
+  foldMap
+    (\a ->
+       if a == cs
+         then Sum 1
+         else mempty)
+
 -- Turn a grid of choices to a list of grids
 cp :: Matrix Choices -> [Grid]
 cp = sequenceA
@@ -160,8 +175,34 @@ prune = pruneBy boxs . pruneBy cols . pruneBy rows
   where
     pruneBy f = f . newly (fmap thin) . f
 
+prune2 :: Matrix Choices -> Matrix Choices
+prune2 = pruneBy boxs . pruneBy cols . pruneBy rows
+  where
+    pruneBy f = f . newly (fmap thin2) . f
+
+prune3 :: Matrix Choices -> Matrix Choices
+prune3 = pruneBy boxs . pruneBy cols . pruneBy rows
+  where
+    pruneBy f = f . newly (fmap thin3) . f
+
 thin :: Row Choices -> Row Choices
 thin xss = fmap (`minus` singles xss) xss
+
+thin2 :: Row Choices -> Row Choices
+thin2 xss
+  | null duplicatePairs = xss
+  | otherwise = fmap (`minus2` duplicatePairs) xss
+  where
+    thePairs = pairs xss
+    duplicatePairs = duplicates thePairs
+
+thin3 :: Row Choices -> Row Choices
+thin3 xss
+  | null tripleTrebles = xss
+  | otherwise = fmap (`minus2` tripleTrebles) xss
+  where
+    theTrebles = trebles xss
+    tripleTrebles = nub $ filter (\treble -> occurrences treble theTrebles == 3) theTrebles
 
 singles :: Row Choices -> Choices
 singles =
@@ -171,11 +212,33 @@ singles =
          then a
          else mempty)
 
+pairs :: Row Choices -> [Choices]
+pairs =
+  foldMap
+    (\a ->
+       if pair a
+         then [a]
+         else mempty)
+
+trebles :: Row Choices -> [Choices]
+trebles =
+  foldMap
+    (\a ->
+       if treble a
+         then [a]
+         else mempty)
+
 minus :: Choices -> Choices -> Choices
 xs `minus` ys =
   if single xs
     then xs
     else xs \\ ys
+
+minus2 :: Choices -> [Choices] -> Choices
+xs `minus2` (ys:yss)
+  | xs == ys = xs `minus2` yss
+  | otherwise = (xs \\ ys) `minus2` yss
+xs `minus2` [] = xs
 
 -- Repeatedly pruning
 fix :: Eq a => (a -> a) -> a -> a
@@ -190,6 +253,9 @@ fix f x =
 -- Validity checking
 complete :: Matrix Choices -> Bool
 complete = all single
+
+valid :: Grid -> Bool
+valid g = all (\f -> nodups $ f g) [rows, cols, boxs]
 
 void :: Matrix Choices -> Bool
 void = any null
@@ -226,11 +292,11 @@ counts = fmap length
 n :: Row Int -> Int
 n = minimum
 
-zone :: Row Char
+zone :: Row Value
 zone = O (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'a'))
 
-zone2 :: Row [Value]
-zone2 = O (Tr (Tr "ab" "bc" "c") (Tr "d" "e" "f") (Tr "g" "h" "ab"))
+zone2 :: Row Choices
+zone2 = O (Tr (Tr "12" "123" "9") (Tr "123" "5" "123") (Tr "7" "1234" "12"))
 
 -- TODO: Put this into the test suite
 tryThis :: String
@@ -279,4 +345,4 @@ test4 = prune . prune $ choices test0
 test5 :: IO ()
 test5 = putStrLn . showMatrix . prune . prune $ choices test0
 
-test6 = length (expand test4)
+test6 = putStrLn $ showMatrix $ head (expand test4)
