@@ -7,4 +7,4 @@ module Test where
 
   testVerify :: [(a,[b])] -> (Bool,[(a,[b])])
   testVerify checks
-    = (and (map ((==1) . length . snd) checks), checks)
+    = (all ((== 1) . length . snd) checks, checks)

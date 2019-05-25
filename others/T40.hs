@@ -21,9 +21,11 @@ module Main where
 
   -- Verify all:
 
+  t40Do :: String -> String -> String
   t40Do s r
     = "t40: sdkVerify" ++ s ++ ": " ++ forIndent1 2 r ++ "\n"
 
+  main :: IO ()
   main
     = do
         putStr "t40: 2005-Aug-24 20.47\n"
@@ -39,6 +41,7 @@ module Main where
 
   -- Subsets:
 
+  sdkSubSets :: [a] -> [[a]]
   sdkSubSets [] = [[]]
   sdkSubSets (e:es)
     = let
@@ -48,19 +51,23 @@ module Main where
 
   -- Test board:
 
+  sdkVerifyBoard :: Array (Int, Int) String
   sdkVerifyBoard
     = let
         n = 2
         n2 = n*n
-        all = concat (map show [1..n2])
+        --all = concatMap show [1..n2]
       in
         listArray ((0,0),(n2-1,n2-1)) (map (show . (+1) . (`mod`9)) [0..])
 
   -- SuDoku constraint set test:
 
+  sdkVerifyACheck1 :: (Eq a, Num a, Enum a) =>
+                      a -> [[(a, a)]] -> (a, [[[(a, a)]]])
   sdkVerifyACheck1 n sdkCheck
     = ( n, nub [sdkConstraintSetsTraditional n, sdkCheck] )
 
+  sdkVerifyA :: (Bool, [(Int, [[[(Int, Int)]]])])
   sdkVerifyA
     = testVerify
         [
@@ -84,9 +91,11 @@ module Main where
 
   -- SuDoku subset test:
 
+  sdkVerifyBCheck1 :: Eq a => [a] -> [[a]] -> ([a], [[[a]]])
   sdkVerifyBCheck1 st sdkCheck
-    = ( st, (nub . map id) [sdkSubSets st, sdkCheck] )
+    = ( st, nub  [sdkSubSets st, sdkCheck] )
 
+  sdkVerifyB :: (Bool, [(String, [[String]])])
   sdkVerifyB
     = testVerify
         [
@@ -97,9 +106,12 @@ module Main where
 
   -- SuDoku reduce constraint set by field test:
 
+  sdkVerifyCCheck1 :: (Eq a2, Eq a1) =>
+                      [(a2, [a1])] -> [(a2, [a1])] -> ([(a2, [a1])], [[(a2, [a1])]])
   sdkVerifyCCheck1 st sdkCheck
     = ( st, nub [sdkReduceByField st, sdkCheck] )
 
+  sdkVerifyC :: (Bool, [([(Int, String)], [[(Int, String)]])])
   sdkVerifyC
     = testVerify
         [
@@ -119,9 +131,13 @@ module Main where
 
   -- Board extraction test:
 
+  sdkVerifyDCheck1 :: (Eq b, Ix i) =>
+                      Array i b -> [i] -> [(i, b)] -> ((Array i b, [i]), [[(i, b)]])
   sdkVerifyDCheck1 bd cs sdkCheck
     = ( ( bd, cs), nub [sdkBoardExtract bd cs, sdkCheck] )
 
+  sdkVerifyD :: (Bool, [((Array (Int, Int) String, [(Int, Int)]),
+                       [[((Int, Int), String)]])])
   sdkVerifyD
     = testVerify
         [
@@ -133,9 +149,14 @@ module Main where
 
   -- Board reduction test:
 
+  sdkVerifyECheck1 :: (Ix i, Eq a1) =>
+                      Array i [a1]
+                      -> [i] -> Array i [a1] -> ((Array i [a1], [i]), [Array i [a1]])
   sdkVerifyECheck1 bd cs sdkCheck
     = ( ( bd, cs), nub [sdkBoardReduce sdkReduceByField bd cs, sdkCheck] )
 
+  sdkVerifyE :: (Bool, [((Array (Int, Int) String, [(Int, Int)]),
+                       [Array (Int, Int) String])])
   sdkVerifyE
     = testVerify
         [
@@ -147,13 +168,15 @@ module Main where
 
   -- SuDoku size-sorted subset test:
 
+  sdkVerifyFCheck1 :: Eq a => [a] -> ([a], [[[a]]])
   sdkVerifyFCheck1 st
     = (
         st,
-        (nub . map id)
-          [sdkSubSetsSizeOrdered st, ((sortByF genericLength) . sdkSubSets) st]
+        nub
+          [sdkSubSetsSizeOrdered st, (sortByF genericLength . sdkSubSets) st]
       )
 
+  sdkVerifyF :: (Bool, [(String, [[String]])])
   sdkVerifyF
     = testVerify
         [
@@ -163,9 +186,12 @@ module Main where
 
   -- SuDoku reduce constraint set by element test:
 
+  sdkVerifyGCheck1 :: (Eq a2, Eq a1) =>
+                      [(a2, [a1])] -> [(a2, [a1])] -> ([(a2, [a1])], [[(a2, [a1])]])
   sdkVerifyGCheck1 st sdkCheck
     = ( st, nub [sdkReduceByElement st, sdkCheck] )
 
+  sdkVerifyG :: (Bool, [([(Int, String)], [[(Int, String)]])])
   sdkVerifyG
     = testVerify
         [
@@ -176,9 +202,12 @@ module Main where
 
   -- SuDoku compare reduce by field and by element:
 
+  sdkVerifyHCheck1 :: (Ord a2, Ord a1) =>
+                      [(a2, [a1])] -> ([(a2, [a1])], [[(a2, [a1])]])
   sdkVerifyHCheck1 st
     = ( st, (nub . map sort) [sdkReduceByElement st, sdkReduceByField st] )
 
+  sdkVerifyH :: (Bool, [([(Int, String)], [[(Int, String)]])])
   sdkVerifyH
     = let
         all = "123456789"
@@ -193,9 +222,11 @@ module Main where
 
   -- SuDoku assignments and sensible test:
 
+  sdkVerifyICheck1 :: Eq a => [[a]] -> (Bool, [[a]]) -> ([[a]], [(Bool, [[a]])])
   sdkVerifyICheck1 es sdkCheck
     = ( es, nub [(sdkSensible es,sdkAssignments es), sdkCheck] )
 
+  sdkVerifyI :: (Bool, [([String], [(Bool, [String])])])
   sdkVerifyI
     = testVerify
         [

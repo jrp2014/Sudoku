@@ -8,6 +8,8 @@ module SortByF where
 
   -- Special sorting:
 
+  sbfCompareSub :: Ord a => (t -> a) -> t -> t -> Ordering
   sbfCompareSub f a b = compare (f a) (f b)
 
+  sortByF :: Ord a => (t -> a) -> [t] -> [t]
   sortByF f = sortBy (sbfCompareSub f)

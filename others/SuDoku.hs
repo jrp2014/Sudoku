@@ -1,4 +1,5 @@
 -- SuDoku.hs: Su Doku solution
+-- 2019-May-25 / TN: add type sigs and hlint
 -- 2005-Aug-23 / TN
 -- 2005-Oct-05 / TN: sdkSubSetsSizeOrdered (several)
 -- 2005-Oct-07 / TN: sdkReduceByField
@@ -29,6 +30,8 @@ module SuDoku where
 
   -- Traditional constraint sets:
 
+  sdkConstraintSetsTraditional :: (Eq a, Num a, Enum a) =>
+                                  a -> [[(a, a)]]
   sdkConstraintSetsTraditional n
     = nub ( rows ++ columns ++ squares )
       where
@@ -41,11 +44,15 @@ module SuDoku where
 
   -- Rebase a constraint set:
 
+  sdkConstraintSetRebase :: (Num a, Num b) =>
+                            a -> b -> [(a, b)] -> [(a, b)]
   sdkConstraintSetRebase row col cs
     = map (\(x,y) -> (row+x,col+y)) cs
 
   -- Clover constraint sets:
 
+  sdkConstraintSetsClover :: (Ord a, Enum a, Num a) =>
+                             a -> [[(a, a)]]
   sdkConstraintSetsClover n
     = let
         baseSets = sdkConstraintSetsTraditional n
@@ -66,6 +73,7 @@ module SuDoku where
 
   -- Subsets ordered by size (basic and improved(?)):
 
+  sdkSubSetsSizeOrdered :: [a] -> [[a]]
   sdkSubSetsSizeOrdered [] = [[]]
   sdkSubSetsSizeOrdered (e:es)
     = let
@@ -75,15 +83,22 @@ module SuDoku where
 
   -- Reduce constraint set by field:
 
-  sdkElements st = (nub . concat . map snd) st
+  sdkElements :: Eq a1 => [(a2, [a1])] -> [a1]
+  sdkElements st = (nub . concatMap snd) st
 
+  sdkListLengthLE :: [a1] -> [a2] -> Bool
   sdkListLengthLE [] _ = True
   sdkListLengthLE (_:_) [] = False
   sdkListLengthLE (_:es1) (_:es2) = sdkListLengthLE es1 es2
+
+  sdkReducing :: Eq a => [(a2, [a])] -> Bool
   sdkReducing st = sdkListLengthLE (sdkElements st) st
 
+  sdkRemove :: Eq a1 => [a1] -> (a2, [a1]) -> (a2, [a1])
   sdkRemove elms (x,es) = (x,es\\elms)
 
+  sdkReductionsByField :: (Eq a2, Eq a1) =>
+                          [(a2, [a1])] -> [([(a2, [a1])], [(a2, [a1])])]
   sdkReductionsByField st
     = let
         []:nonEmptySubSets = sdkSubSetsSizeOrdered st
@@ -92,11 +107,12 @@ module SuDoku where
       in
         map reduceBy reducingSubSets
 
+  sdkReduceByField :: (Eq a2, Eq a1) => [(a2, [a1])] -> [(a2, [a1])]
   sdkReduceByField st
     = let
         reds = sdkReductionsByField st
       in
-        if reds == [] then
+        if null reds then
           st
         else
           let
@@ -106,14 +122,21 @@ module SuDoku where
 
   -- Reduce constraint set by element:
 
-  sdkUses es1 (x,es2) = intersect es1 es2 /= []
+  sdkUses :: Eq a1 => [a1] -> (a2, [a1]) -> Bool
+  sdkUses es1 (_,es2) = intersect es1 es2 /= []
 
+  sdkAttachFields :: Eq a1 =>
+                         [(a2, [a1])] -> [a1] -> ([a1], [(a2, [a1])])
   sdkAttachFields st es = (es,filter (sdkUses es) st)
 
+  sdkIsReducingByElement :: ([a1], [a2]) -> Bool
   sdkIsReducingByElement (es,sts) = genericLength es == genericLength sts
 
+  sdkIntersect :: Eq a1 => [a1] -> (a2, [a1]) -> (a2, [a1])
   sdkIntersect elms (x,es) = (x,es`intersect`elms)
 
+  sdkReductionsByElement :: (Eq a2, Eq a1) =>
+                            [(a2, [a1])] -> [([(a2, [a1])], [(a2, [a1])])]
   sdkReductionsByElement st
     = let
         es = sdkElements st
@@ -125,11 +148,13 @@ module SuDoku where
       in
         map reduceBy reducingElements
 
+  sdkReduceByElement :: (Eq a2, Eq a1) =>
+                        [(a2, [a1])] -> [(a2, [a1])]
   sdkReduceByElement st
     = let
         reds = sdkReductionsByElement st
       in
-        if reds == [] then
+        if null reds then
           st
         else
           let
@@ -139,19 +164,30 @@ module SuDoku where
 
   -- Extract constraint set from board:
 
+  sdkBoardExtract :: Ix i => Array i b -> [i] -> [(i, b)]
   sdkBoardExtract bd cs = map (\x -> ( x, bd!x )) cs
 
   -- Reduce board by single constraint set:
 
+  sdkBoardReduce :: Ix i =>
+                    ([(i, b)] -> [(i, b)]) ->
+                    Array i b -> [i] -> Array i b
   sdkBoardReduce by bd cs = bd // by ( sdkBoardExtract bd cs )
 
   -- Reduce board by all constraint sets:
 
+  sdkBoardReduceAll :: (Foldable t, Ix i) =>
+                       ([(i, b)] -> [(i, b)]) -> t [i] ->
+                       Array i b -> Array i b
   sdkBoardReduceAll by css bd
     = foldl (sdkBoardReduce by) bd css
 
   -- Board closure (reduce until no changes). Note that the entire list of
   -- intermediate boards are produced to allow inspection:
+
+  sdkBoardClosure :: (Eq b, Foldable t, Ix i) =>
+                     ([(i, b)] -> [(i, b)]) -> t [i] ->
+                     Array i b -> [Array i b]
 
   sdkBoardClosure by css bd
     = bd : (
@@ -166,54 +202,66 @@ module SuDoku where
 
   -- Find non-singles on board:
 
+  sdkBoardNonSingles :: (Foldable t, Ix a1) =>
+                        Array a1 (t a2) -> [(a1, t a2)]
   sdkBoardNonSingles bd = filter ((/=1) . length . snd) (assocs bd)
 
   -- Board solve:
 
+  sdkSolve :: (Eq a, Foldable t, Ix i) =>
+              ([(i, [a])] -> [(i, [a])]) -> t [i] ->
+              Array i [a] -> [Array i [a]]
   sdkSolve by css bd
     = let
         bdc = last (sdkBoardClosure by css bd)
         nss = sdkBoardNonSingles bdc
       in
-        if nss == [] then
+        if null nss then
           [bdc]
         else
           let
             (ix,ps) = head (sortByF (length . snd) nss)
           in
-            concat
-              ( map
+            concatMap
                   (\p -> sdkSolve by css ( bdc // [(ix,[p])] ))
                   ps
-              )
 
   -- Show board (assuming that elements are single characters):
 
+  sdkBoardShow :: (Enum a, Num a, Ix a, Ix b, Num b, Enum b) =>
+                  Array (a, b) String -> String
   sdkBoardShow bd
     = let
         ((0,0),(n,m)) = bounds bd
         w = maximum (map length (elems bd))
         pad s = replicate (w - length s) ' ' ++ s
-        showRow i = concat (intersperse " " (map (\j -> pad (bd!(i,j))) [0..m]) )
+        showRow i = unwords (map (\ j -> pad (bd ! (i, j))) [0 .. m])
       in
         concat [ showRow i ++ "\n"  | i<-[0..n] ]
 
-  sdkBoardListShow bds = concat ( map ((++"\n") . forIndent2 2 . sdkBoardShow) bds )
+  sdkBoardListShow :: (Ix a, Ix b, Num a, Num b, Enum a, Enum b) =>
+                      [Array (a, b) String] -> String
+  sdkBoardListShow bds =
+    concatMap ((++"\n") . forIndent2 2 . sdkBoardShow) bds
 
   -- Assignments:
 
+  sdkAssignments :: Eq a => [[a]] -> [[a]]
   sdkAssignments [] = [[]]
   sdkAssignments (es:ess)
-    = concat (map (\e -> map (e:) (sdkAssignments (map (delete e) ess))) es)
+    = concatMap (\e -> map (e:) (sdkAssignments (map (delete e) ess))) es
 
   -- A list of element sets is sensible if assignable and no superfluous elements:
 
+  sdkSensible :: Eq a => [[a]] -> Bool
   sdkSensible ess = length ess == length ((nub . concat) ess) && sdkAssignments ess /= []
 
   -- All lists of element sets using given symbols:
 
+  sdkAllElementListSets :: [a] -> [[[a]]]
   sdkAllElementListSets es = sdkSizedElementListSets (genericLength es) (sdkSubSetsSizeOrdered es)
 
+  sdkSizedElementListSets :: (Eq t, Num t) => t -> [a] -> [[a]]
   sdkSizedElementListSets 0 _ = [[]]
   sdkSizedElementListSets _ [] = []
   sdkSizedElementListSets n ess@(es:ess')
@@ -222,6 +270,7 @@ module SuDoku where
 
   -- Reduce by field and element is the same:
 
+  sdkReductionsIdentical :: Ord a1 => [[a1]] -> Bool
   sdkReductionsIdentical ess
     = let
         st = map ((,) ()) ess
@@ -230,15 +279,25 @@ module SuDoku where
 
   -- Amended reductions:
 
+  sdkReductionsAmended :: (Ord a1, Ord a2) =>
+                          ([a1] -> [([a2], [a2])]) ->
+                          [a1] -> [([a1], [a2])] 
   sdkReductionsAmended by st = map (\(r,rst) -> (sort st, sort (r++rst))) (by st)
 
+  sdkReductions :: (Ord a1, Ord a2, Num a1, Enum a1) =>
+                   ([(a1, [a2])] -> [([(a1, [a2])], [(a1, [a2])])])
+                   -> [a2] -> [([(a1, [a2])], [(a1, [a2])])]
   sdkReductions by es
     = filter
-        (\(st,rst) -> st /=rst)
-        (concat (map (sdkReductionsAmended by) (map (zip [0..]) (filter sdkSensible (sdkAllElementListSets es)))))
+        (uncurry (/=)) $
+        concatMap (sdkReductionsAmended by . zip [0 ..])
+                  (filter sdkSensible (sdkAllElementListSets es))
 
   -- Processing:
 
+  sdkProcessSuDoku :: (Num a, Num b, Enum a, Enum b, Foldable t,
+                      Ix a, Ix b) =>
+                      String -> t [(a, b)] -> Array (a, b) String -> IO ()
   sdkProcessSuDoku process_name css bd
     = do
         cpuStart <- getCPUTime
@@ -275,4 +334,4 @@ module SuDoku where
               putStr ( process_name ++ ": Total of " ++ show (length bds) ++ " solutions\n" )
               cpuEnd <- getCPUTime
               putStr ( process_name ++ ": CPU Used: " ++
-                show ( ((fromIntegral (cpuEnd - cpuStart))::Double)/10^12 ) ++ "\n" )
+                show ( (fromIntegral (cpuEnd - cpuStart)::Double)/10^12 ) ++ "\n" )

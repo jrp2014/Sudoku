@@ -7,10 +7,9 @@ module Main where
   import System.CPUTime
   import System.Environment
 
-  import Data.List
-
   import SuDoku
 
+  processSuDokuReduction :: String -> String -> IO ()
   processSuDokuReduction process_name result
     = do
         cpuStart <- getCPUTime
@@ -20,11 +19,14 @@ module Main where
         putStr ( process_name ++ ": CPU Used: " ++
           show ( ((fromIntegral (cpuEnd - cpuStart))::Double)/10^12 ) ++ "\n" )
 
+  progName :: String
   progName = "SdkMSolv"
+
   data Args
     = ArgElements
         deriving ( Enum )
 
+  main :: IO ()
   main
     = do
         putStr "t44: 2005-Oct-26 20.24\n";
