@@ -18,10 +18,10 @@
 
 module SuDoku where
 
-  import List
-  import Array
-  import IO
-  import CPUTime
+  import Data.List
+  import Data.Array
+  import System.IO
+  import System.CPUTime
 
   import Format
   import SortByF

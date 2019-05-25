@@ -4,7 +4,7 @@
 
 module SortByF where
 
-  import List
+  import Data.List
 
   -- Special sorting:
 

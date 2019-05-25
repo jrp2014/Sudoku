@@ -4,7 +4,7 @@
 
 module Format where
 
-  import List
+  import Data.List
 
   -- Indenting subsequent lines:
 

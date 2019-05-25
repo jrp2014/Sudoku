@@ -5,11 +5,11 @@
 
 module Main where
 
-  import System
-  import IO
-  import CPUTime
-  import Array
-  import List
+  import System.Environment
+  import System.IO
+  import System.CPUTime
+  import Data.Array
+  import Data.List
 
   import Format
 
@@ -51,7 +51,19 @@ module Main where
 
   -- Row amendment:
 
-  sdkRowAmend rowNo row = zip ([(rowNo,col) | col<-[0..]]) row
+  sdkRowAmend rowNo row = zip [(rowNo,col) | col<-[0..]] row
+
+
+-- Utils
+
+  build :: ((a -> [a] -> [a]) -> [a] -> [a]) -> [a]
+  build g = g (:) []
+
+  chunksOf :: Int -> [e] -> [[e]]
+  chunksOf i ls = map (take i) (build (splitter ls)) where
+    splitter :: [e] -> ([e] -> a -> a) -> a -> a
+    splitter [] _ n = n
+    splitter l c n  = l `c` splitter (drop i l) c n
 
   -- Main program:
 
@@ -69,7 +81,7 @@ module Main where
         (css,args2) = sdkConstraintSetsSelect args1
         (sd,rowsBase) = sdkSymbolDefinitions args2
         height = genericLength rowsBase
-        width = maximum ( (map genericLength) rowsBase )
+        width = maximum ( map genericLength rowsBase )
         rowsExpanded = map (sdkRowExpand sd) rowsBase
         rows
           = map

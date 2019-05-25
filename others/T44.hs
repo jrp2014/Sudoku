@@ -3,11 +3,11 @@
 
 module Main where
 
-  import IO
-  import CPUTime
-  import System
+  import System.IO
+  import System.CPUTime
+  import System.Environment
 
-  import List
+  import Data.List
 
   import SuDoku
 

@@ -10,8 +10,8 @@
 
 module Main where
 
-  import List
-  import Array
+  import Data.List
+  import Data.Array
 
   import Test
   import Format
