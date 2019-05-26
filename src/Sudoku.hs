@@ -18,8 +18,8 @@ import Data.List
 type Triple = Id :*: Id :*: Id
 
 pattern Tr :: a -> a -> a -> (:*:) (Id :*: Id) Id a
-pattern Tr a b c = (Id a :*: Id b) :*: Id c
 
+pattern Tr a b c = (Id a :*: Id b) :*: Id c
 
 type Row = Triple :. Triple
 
@@ -159,6 +159,23 @@ occurrences cs =
          then Sum 1
          else mempty)
 
+nonEmptySubsets :: (Eq a) => [a] -> [[a]]
+nonEmptySubsets = tail . subsets'
+  where
+    subsets' :: (Eq a) => [a] -> [[a]]
+    subsets' [] = [[]]
+    subsets' (x:xs) = subsets' xs ++ map (x :) (subsets' xs)
+
+filterRow :: (a -> Bool) -> Row a -> [a]
+filterRow p = foldMap (\x -> [x | p x])
+
+
+--counts p = getSum . foldMap (\x -> if p x then 1 else 0)
+
+isSubsetOf :: (Foldable t1, Foldable t2, Eq a) =>
+                    t1 a -> t2 a -> Bool
+isSubsetOf a b  = all  (`elem` b) a
+--
 -- Turn a grid of choices to a list of grids
 cp :: Matrix Choices -> [Grid]
 cp = sequenceA
@@ -202,7 +219,8 @@ thin3 xss
   | otherwise = fmap (`minus2` tripleTrebles) xss
   where
     theTrebles = trebles xss
-    tripleTrebles = nub $ filter (\treble -> occurrences treble theTrebles == 3) theTrebles
+    tripleTrebles =
+      nub $ filter (\treble -> occurrences treble theTrebles == 3) theTrebles
 
 singles :: Row Choices -> Choices
 singles =
@@ -346,3 +364,8 @@ test5 :: IO ()
 test5 = putStrLn . showMatrix . prune . prune $ choices test0
 
 test6 = putStrLn $ showMatrix $ head (expand test4)
+
+-- the union of subsets of Choices in a Row
+test7 :: [[Value]]
+test7 = nub . concat . flatten $ fmap nonEmptySubsets zone2
+
