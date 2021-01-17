@@ -1,5 +1,5 @@
 SUDOKU IN HASKELL
-Graham Hutton, January 2019
+Graham Hutton, January 2021
 Based upon notes by Richard Bird
 
 The program developed in this note is a good example of what

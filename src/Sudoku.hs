@@ -10,6 +10,8 @@ import Data.Traversable
 import NanoParsec
 
 import FunctorCombo.Functor
+import FunctorCombo.DHoley
+import FunctorCombo.ZipperFix
 
 import Data.Functor (($>))
 import Data.List
@@ -30,6 +32,9 @@ type Matrix = Row :. Row
 type Value = Char
 
 type Choices = [Value]
+
+type Zip = Zipper Row
+
 
 showValue :: Value -> Char
 showValue = id
@@ -302,7 +307,7 @@ search m
 
 -- TODO: This doesn't work
 expand :: Matrix Choices -> [Matrix Choices]
-expand = traverse $ fmap (: [])
+expand = traverse _
 
 counts :: Row Choices -> Row Int
 counts = fmap length
@@ -363,6 +368,7 @@ test4 = prune . prune $ choices test0
 test5 :: IO ()
 test5 = putStrLn . showMatrix . prune . prune $ choices test0
 
+test6 :: IO ()
 test6 = putStrLn $ showMatrix $ head (expand test4)
 
 -- the union of subsets of Choices in a Row

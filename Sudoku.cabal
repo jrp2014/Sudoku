@@ -24,7 +24,7 @@ library
   exposed-modules:     Sudoku, NanoParsec
                        
 
-  build-depends:       base ^>= 4.12.0.0
+  build-depends:       base >= 4.13.0.0
                      , functor-combo
                      
 
@@ -44,7 +44,7 @@ executable Sudoku
   hs-source-dirs:      app
   main-is:             Main.hs
 
-  build-depends:       base ^>= 4.12.0.0
+  build-depends:       base >= 4.13.0.0
                      , Sudoku
                      
 
@@ -68,7 +68,7 @@ test-suite Sudoku-test
   hs-source-dirs:      test
   main-is:             Spec.hs
 
-  build-depends:       base ^>= 4.12.0.0
+  build-depends:       base >= 4.13.0.0
                      , Sudoku
                      
 
@@ -92,7 +92,7 @@ benchmark Sudoku-benchmark
   hs-source-dirs:      benchmark
   main-is:             Main.hs
 
-  build-depends:       base ^>= 4.12.0.0
+  build-depends:       base >= 4.13.0.0
                      , gauge
                      , Sudoku
                      
