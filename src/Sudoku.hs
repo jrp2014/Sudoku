@@ -157,7 +157,7 @@ choices = fmap choice
 
 occurrences :: Foldable f => Choices -> f Choices -> Int
 occurrences cs =
-  sum .
+  getSum .
   foldMap
     (\a ->
        if a == cs
@@ -174,12 +174,19 @@ nonEmptySubsets = tail . subsets'
 filterRow :: (a -> Bool) -> Row a -> [a]
 filterRow p = foldMap (\x -> [x | p x])
 
+countSatisfy :: (a -> Bool) -> Row a -> Int
+countSatisfy p =
+  getSum .
+  foldMap
+    (\x ->
+       if p x
+         then Sum 1
+         else mempty)
 
 --counts p = getSum . foldMap (\x -> if p x then 1 else 0)
+isSubsetOf :: (Foldable t1, Foldable t2, Eq a) => t1 a -> t2 a -> Bool
+isSubsetOf a b = all (`elem` b) a
 
-isSubsetOf :: (Foldable t1, Foldable t2, Eq a) =>
-                    t1 a -> t2 a -> Bool
-isSubsetOf a b  = all  (`elem` b) a
 --
 -- Turn a grid of choices to a list of grids
 cp :: Matrix Choices -> [Grid]
@@ -225,7 +232,7 @@ thin3 xss
   where
     theTrebles = trebles xss
     tripleTrebles =
-      nub $ filter (\treble -> occurrences treble theTrebles == 3) theTrebles
+      nub $ filter (\trble -> occurrences trble theTrebles == 3) theTrebles
 
 singles :: Row Choices -> Choices
 singles =
@@ -374,4 +381,3 @@ test6 = putStrLn $ showMatrix $ head (expand test4)
 -- the union of subsets of Choices in a Row
 test7 :: [[Value]]
 test7 = nub . concat . flatten $ fmap nonEmptySubsets zone2
-
