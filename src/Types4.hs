@@ -15,6 +15,7 @@ import Control.Applicative ( Alternative((<|>), empty, many) )
 import Data.Char ( isDigit, isSpace )
 import Data.Monoid ( All(..), Any(..), Product(..), Sum(..) )
 import Data.Foldable (fold)
+import Data.List (sort, group)
 --import Data.Traversable
 --import Data.Functor (($>))
 
@@ -258,11 +259,11 @@ tryThis =
     ]
 
 -- transpose a board
-xpBoard :: Board Cell -> Board Cell
+xpBoard :: Board c -> Board c
 xpBoard = newly sequenceA
 
 -- turn each box into a board row
-boxBoard :: Board Cell -> Board Cell
+boxBoard :: Board c -> Board c
 boxBoard = newly (fmap C . newly (fmap sequenceA) . fmap unC)
 
 -- where is the program?
@@ -285,5 +286,16 @@ reduce = fold -- foldMap id -- fold / cf: mconcat
 flatten :: (Traversable f) => f a -> [a]
 flatten = foldMap (: [])
 
-duplicates :: (Traversable f, Eq a) => f a -> [a]
-duplicates = undefined
+--  TODO:: there may be a less naive way of doing this
+--  traversable / foldable are used to generate a list of the elements of f a 
+--  but traversable doesn't maintain state, so can't compare elements to each
+--  other.
+duplicates :: (Foldable f, Ord a) => f a -> [a]
+duplicates =  map head . filter ((>1 ) . length) . group . sort . foldMap (: [])
+
+complete :: Board Int -> Bool
+complete = all (`elem` [1..9])
+
+ok:: Board Int -> Bool
+ok board = all (null . duplicates . ($ board)) [id, xpBoard, boxBoard]
+
