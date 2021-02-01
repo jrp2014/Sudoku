@@ -2,18 +2,20 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Sudoku (solve5) where
+module Sudoku where
 
-import Control.Applicative
-import Control.Monad.State hiding (fix)
-import Data.Char
+import Control.Applicative ( Const(getConst), Alternative((<|>)) )
+import Control.Monad.State
+    ( evalStateT, MonadState(put, get), MonadTrans(lift), StateT )
+import Data.Char ( digitToInt )
 import Data.Functor (($>))
-import Data.List
-import Data.Monoid
-import Data.Traversable
+import Data.List ( foldl', (\\), nub, mapAccumL )
+import Data.Monoid ( Sum(Sum, getSum) )
 import FunctorCombo.Functor
-import FunctorCombo.ZipperFix
-import NanoParsec
+    ( unO, type (:.)(..), Id(..), type (:*:)(..) )
+import FunctorCombo.ZipperFix ( Zipper )
+import NanoParsec ( Parser(parse), char, spaces, digit )
+import Data.Foldable ( Foldable(fold) )
 
 main :: IO ()
 main = do
@@ -155,10 +157,11 @@ crush :: (Traversable f, Monoid b) => (a -> b) -> f a -> b
 crush = foldMap
 
 reduce :: (Traversable t, Monoid o) => t o -> o
-reduce = crush id
+-- reduce = crush id
+reduce = fold
 
 flatten :: (Traversable f) => f a -> [a]
-flatten = crush (: [])
+flatten = foldMap (: [])
 
 -- TODO: is this the best we can do?
 duplicates' :: (Eq a, Foldable f) => f a -> Bool
