@@ -11,11 +11,13 @@ module Types4 where
 -- Adapted from
 -- https://github.com/pigworker/WhatRTypes4/blob/master/Types4Crib.hs
 
-import Control.Applicative ( Alternative((<|>), empty, many) )
-import Data.Char ( isDigit, isSpace )
-import Data.Monoid ( All(..), Any(..), Product(..), Sum(..) )
+import Control.Applicative (Alternative (empty, many, (<|>)))
+import Control.Monad.State
+import Data.Char (isDigit, isSpace)
 import Data.Foldable (fold)
-import Data.List (sort, group)
+import Data.List (group, sort)
+import Data.Monoid (All (..), Any (..), Product (..), Sum (..))
+
 --import Data.Traversable
 --import Data.Functor (($>))
 
@@ -71,7 +73,7 @@ pcell =
 
 newtype I x = I x deriving (Show)
 
-newtype K a x = K { unK :: a } deriving (Show)
+newtype K a x = K {unK :: a} deriving (Show)
 
 data (f :*: g) x = f x :*: g x deriving (Show)
 
@@ -224,6 +226,15 @@ instance Show a => Display (Maybe a) where
   display Nothing = "."
   display (Just a) = show a
 
+instance Display a => Display [a] where
+  display xs = "[" ++ concatMap display xs ++ "]"
+
+instance Display Int where
+  display = show
+
+instance Display a => Display (FirstChoice a) where
+  display (FirstChoice x xs) = "{" ++ display x ++ "; " ++ display xs ++ "}"
+
 instance Display a => Display (I a) where
   display (I x) = display x
 
@@ -231,10 +242,10 @@ instance Display a => Display (K a x) where
   display (K a) = display a
 
 instance (Display (f (g a))) => Display ((f :.: g) a) where
-  display  = (<> "\n" ) . display . unC
+  display = (<> "\n") . display . unC
 
-instance  (Display (f a), Display (g a)) => Display ((f :*: g) a) where
-  display  (f :*: g) = display f <> display g
+instance (Display (f a), Display (g a)) => Display ((f :*: g) a) where
+  display (f :*: g) = display f <> display g
 
 {-----------------------------------------------------------------------}
 -- sudoku boards
@@ -270,7 +281,11 @@ boxBoard = newly (fmap C . newly (fmap sequenceA) . fmap unC)
 main :: IO ()
 main = do
   --- adds three extra newlines...
-  putStr $ display $ parseBoard tryThis 
+  putStr $ display $ parseBoard tryThis
+  putStr $ display $ choices $ parseBoard tryThis
+  putStr $ display $  expand' $ choices $ parseBoard tryThis
+
+--putStr $  sequenceA  $ choices' $ parseBoard tryThis
 
 parseBoard :: String -> Board Cell
 parseBoard s = b
@@ -278,7 +293,7 @@ parseBoard s = b
     [(b, _)] = parse pboard s
 
 crush :: (Traversable f, Monoid b) => (a -> b) -> f a -> b
-crush f = unK . traverse (K . f)  -- foldMap
+crush f = unK . traverse (K . f) -- foldMap
 
 reduce :: (Traversable t, Monoid o) => t o -> o
 reduce = fold -- foldMap id -- fold / cf: mconcat
@@ -287,15 +302,70 @@ flatten :: (Traversable f) => f a -> [a]
 flatten = foldMap (: [])
 
 --  TODO:: there may be a less naive way of doing this
---  traversable / foldable are used to generate a list of the elements of f a 
+--  traversable / foldable are used to generate a list of the elements of f a
 --  but traversable doesn't maintain state, so can't compare elements to each
 --  other.
 duplicates :: (Foldable f, Ord a) => f a -> [a]
-duplicates =  map head . filter ((>1 ) . length) . group . sort . foldMap (: [])
+duplicates = map head . filter ((> 1) . length) . group . sort . foldMap (: [])
 
 complete :: Board Int -> Bool
-complete = all (`elem` [1..9])
+complete = all (`elem` [1 .. 9])
 
-ok:: Board Int -> Bool
+ok :: Board Int -> Bool
 ok board = all (null . duplicates . ($ board)) [id, xpBoard, boxBoard]
 
+collapse :: Board [a] -> [Board a]
+collapse = sequenceA
+
+choices :: Board Cell -> Board [Int]
+choices = newly $ fmap (fmap choice)
+  where
+    choice :: Maybe Int -> [Int]
+    choice c = maybe [1 .. 9] (: []) c
+
+expand :: Board [a] -> [Board a]
+expand = undefined
+
+data FirstChoice a = FirstChoice a [a] -- to not choose or to choose once
+  deriving (Eq, Show)
+
+instance Functor FirstChoice where
+  fmap f (FirstChoice x xs) = FirstChoice (f x) (fmap f xs)
+
+instance Applicative FirstChoice where
+  pure x = FirstChoice x [x]
+  FirstChoice f [_] <*> xs = fmap f xs
+  fs <*> FirstChoice x _ = fmap (\f -> f x) fs
+
+{-
+ -
+choices' :: Board Cell -> Board (FirstChoice [Int])
+choices' = newly $ fmap (fmap choice)
+  where
+    choice :: Maybe Int -> FirstChoice [Int]
+    choice c = choose $ maybe [1 .. 9] (: []) c
+
+choose :: [a] -> FirstChoice [a]
+choose xs = FirstChoice xs (fmap (: []) xs)
+
+expand' :: Board [a] -> FirstChoice (Board [a])
+expand' = traverse (choose)
+   where
+     f :: [a] -> FirstChoice [a] -> [[a]]
+     f [] _ = [[]]
+     f [x]  _= [[x]]
+     f xs (FirstChoice y zs) = zs
+-}
+
+choose :: [a] -> StateT Bool [] [a]
+choose [x] = return [x]
+choose xss@(x : _) = do
+  chosen <- get
+  if chosen
+    then return xss
+    else do
+      put True
+      return [x]
+
+expand' :: Traversable t => t [a] -> [t [a]]
+expand' xs = evalStateT (traverse choose xs) False

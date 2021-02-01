@@ -26,6 +26,7 @@ library
 
   build-depends:       base >= 4.13.0.0
                      , functor-combo
+                     , mtl
                      
 
   ghc-options:         -Wall
@@ -46,7 +47,6 @@ executable Sudoku
 
   build-depends:       base >= 4.13.0.0
                      , Sudoku
-                     
 
   ghc-options:         -Wall
                        -threaded

@@ -1,26 +1,33 @@
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeOperators #-}
 
-module Sudoku where
+module Sudoku (solve5) where
 
 import Control.Applicative
-import Data.Monoid
-import Data.Traversable
-import NanoParsec
-
-import FunctorCombo.Functor
-import FunctorCombo.DHoley
-import FunctorCombo.ZipperFix
-
+import Control.Monad.State hiding (fix)
+import Data.Char
 import Data.Functor (($>))
 import Data.List
+import Data.Monoid
+import Data.Traversable
+import FunctorCombo.Functor
+import FunctorCombo.ZipperFix
+import NanoParsec
+
+main :: IO ()
+main = do
+  putStrLn $ solve5 tryThis
+  putStrLn $ solve5 easy
+  putStrLn $ solve5 gentle
+  putStrLn $ solve5 diabolical
+  putStrLn $ solve5 unsolvable
+  putStrLn $ solve5 minimal
 
 -- Basic declarations
 type Triple = Id :*: Id :*: Id
 
 pattern Tr :: a -> a -> a -> (:*:) (Id :*: Id) Id a
-
 pattern Tr a b c = (Id a :*: Id b) :*: Id c
 
 type Row = Triple :. Triple
@@ -35,22 +42,22 @@ type Choices = [Value]
 
 type Zip = Zipper Row
 
-
 showValue :: Value -> Char
 showValue = id
 
 showChoices :: Choices -> String
 --showChoices vs = '[' : vs ++ replicate (9 - length vs) ' ' ++ "]"
 showChoices xs =
-  (++ "]") .
-  Data.List.foldl'
-    (\acc x ->
-       acc ++
-       if x `elem` xs
-         then [x]
-         else " ")
-    "[" $
-  ['1' .. '9']
+  (++ "]")
+    . Data.List.foldl'
+      ( \acc x ->
+          acc
+            ++ if x `elem` xs
+              then [x]
+              else " "
+      )
+      "["
+    $ ['1' .. '9']
 
 showTriple :: Triple Choices -> String
 showTriple (Tr a b c) = showChoices a ++ showChoices b ++ showChoices c
@@ -64,13 +71,40 @@ showMatrix = foldMap showRow . unO
 showMatrix' :: Matrix Choices -> String
 showMatrix' = foldMap showChoices
 
--- putStrLn $ unlines $ fmap showRow $ sequenceA $ (fmap.fmap) (:[]) zone2
+class Show a => Display a where
+  display :: a -> String
+
+instance Show a => Display (Maybe a) where
+  display Nothing = "."
+  display (Just a) = show a
+
+instance Display a => Display [a] where
+  display xs = "[" ++ concatMap display xs ++ "]"
+
+instance Display Int where
+  display = show
+
+instance Display Char where
+  display c = show (digitToInt c)
+
+instance Display a => Display (Id a) where
+  display (Id x) = display x
+
+instance Display a => Display (Const a x) where
+  display k = display (getConst k)
+
+instance (Display (f (g a))) => Display ((f :. g) a) where
+  display = (<> "\n") . display . unO
+
+instance (Display (f a), Display (g a)) => Display ((f :*: g) a) where
+  display (f :*: g) = display f <> display g
+
 --
 -- Basic definitions
 values :: [Value]
 values = ['1' .. '9']
 
--- Some format use 0, others '.', for blanks
+-- Some formats use 0, others '.', for blanks
 blank :: Value -> Bool
 blank x = x == '0' || x == '.'
 
@@ -92,13 +126,13 @@ rows = id
 
 cols :: Matrix a -> Matrix a
 -- cols = newly sequenceA
-cols = O . sequenceA . unO
+cols = newly sequenceA
 
 boxs :: Matrix a -> Matrix a
 --boxMatrix = newly (fmap O . newly (fmap sequenceA) . fmap unO)
 boxs = O . fmap O . O . fmap sequenceA . unO . fmap unO . unO
 
--- Parsing 
+-- Parsing
 pboard :: Parser Grid
 pboard = sequenceA (pure pcell)
 
@@ -157,31 +191,34 @@ choices = fmap choice
 
 occurrences :: Foldable f => Choices -> f Choices -> Int
 occurrences cs =
-  getSum .
-  foldMap
-    (\a ->
-       if a == cs
-         then Sum 1
-         else mempty)
+  getSum
+    . foldMap
+      ( \a ->
+          if a == cs
+            then Sum 1
+            else mempty
+      )
 
 nonEmptySubsets :: (Eq a) => [a] -> [[a]]
 nonEmptySubsets = tail . subsets'
   where
     subsets' :: (Eq a) => [a] -> [[a]]
     subsets' [] = [[]]
-    subsets' (x:xs) = subsets' xs ++ map (x :) (subsets' xs)
+    subsets' (x : xs) = subsets' xs ++ map (x :) (subsets' xs)
 
 filterRow :: (a -> Bool) -> Row a -> [a]
 filterRow p = foldMap (\x -> [x | p x])
 
 countSatisfy :: (a -> Bool) -> Row a -> Int
 countSatisfy p =
-  getSum .
-  foldMap
-    (\x ->
-       if p x
-         then Sum 1
-         else mempty)
+  getSum
+    . foldMap
+      ( \x ->
+          Sum $
+            if p x
+              then 1
+              else 0
+      )
 
 --counts p = getSum . foldMap (\x -> if p x then 1 else 0)
 isSubsetOf :: (Foldable t1, Foldable t2, Eq a) => t1 a -> t2 a -> Bool
@@ -237,26 +274,29 @@ thin3 xss
 singles :: Row Choices -> Choices
 singles =
   foldMap
-    (\a ->
-       if single a
-         then a
-         else mempty)
+    ( \a ->
+        if single a
+          then a
+          else mempty
+    )
 
 pairs :: Row Choices -> [Choices]
 pairs =
   foldMap
-    (\a ->
-       if pair a
-         then [a]
-         else mempty)
+    ( \a ->
+        if pair a
+          then [a]
+          else mempty
+    )
 
 trebles :: Row Choices -> [Choices]
 trebles =
   foldMap
-    (\a ->
-       if treble a
-         then [a]
-         else mempty)
+    ( \a ->
+        if treble a
+          then [a]
+          else mempty
+    )
 
 minus :: Choices -> Choices -> Choices
 xs `minus` ys =
@@ -265,7 +305,7 @@ xs `minus` ys =
     else xs \\ ys
 
 minus2 :: Choices -> [Choices] -> Choices
-xs `minus2` (ys:yss)
+xs `minus2` (ys : yss)
   | xs == ys = xs `minus2` yss
   | otherwise = (xs \\ ys) `minus2` yss
 xs `minus2` [] = xs
@@ -306,21 +346,37 @@ blocked m = Sudoku.void m || not (safe m)
 solve4 :: Grid -> [Grid]
 solve4 = search . prune . choices
 
+-- Use solve4 to solve the given board
+solve5 :: String -> String
+solve5 input
+  | length results == 1 = head results
+  | otherwise = "No unique solution found:\n" ++ show results
+  where
+    results = map display . solve4 . parseBoard $ input
+
 search :: Matrix Choices -> [Grid]
 search m
   | blocked m = []
   | complete m = collapse m
   | otherwise = [g | m' <- expand m, g <- search (prune m')]
 
--- TODO: This doesn't work
+choose :: Choices -> StateT Bool [] Choices
+choose [x] = return [x]
+choose xss = do
+  chosen <- get
+  if chosen
+    then return xss
+    else do
+      put True
+      x <- lift xss
+      return [x]
+
 expand :: Matrix Choices -> [Matrix Choices]
-expand = traverse _
+--expand :: Traversable t => t [a] -> [t [a]]
+expand xs = evalStateT (traverse choose xs) False
 
 counts :: Row Choices -> Row Int
 counts = fmap length
-
-n :: Row Int -> Int
-n = minimum
 
 zone :: Row Value
 zone = O (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'a'))
@@ -332,52 +388,86 @@ zone2 = O (Tr (Tr "12" "123" "9") (Tr "123" "5" "123") (Tr "7" "1234" "12"))
 tryThis :: String
 tryThis =
   unlines
-    [ "...23.6.."
-    , "1.......7"
-    , ".4...518."
-    , "5.....9.."
-    , "..73.68.."
-    , "..4.....5"
-    , ".867...5."
-    , "4.......9"
-    , "..3.62..."
+    [ "...23.6..",
+      "1.......7",
+      ".4...518.",
+      "5.....9..",
+      "..73.68..",
+      "..4.....5",
+      ".867...5.",
+      "4.......9",
+      "..3.62..."
     ]
 
 easy :: String
 easy =
   unlines
-    [ "2....1.38"
-    , "........5"
-    , ".7...6..."
-    , ".......13"
-    , ".981..257"
-    , "31....8.."
-    , "9..8...2."
-    , ".5..69784"
-    , "4..25...."
+    [ "2....1.38",
+      "........5",
+      ".7...6...",
+      ".......13",
+      ".981..257",
+      "31....8..",
+      "9..8...2.",
+      ".5..69784",
+      "4..25...."
     ]
 
-test0 :: Grid
-test0 = parseBoard easy
+gentle :: String
+gentle =
+  unlines
+    [ ".1.42...5",
+      "..2.71.39",
+      ".......4.",
+      "2.71....6",
+      "....4....",
+      "6....74.3",
+      ".7.......",
+      "12.73.5..",
+      "3...82.7."
+    ]
 
-test1 :: [Value]
-test1 = flatten test0
+--First diabolical example:
+diabolical :: String
+diabolical =
+  unlines
+    [ ".9.7..86.",
+      ".31..5.2.",
+      "8.6......",
+      "..7.5...6",
+      "...3.7...",
+      "5...1.7..",
+      "......1.9",
+      ".2.6..35.",
+      ".54..8.7."
+    ]
 
-test2 :: Bool
-test2 = valid test0
+-- First "unsolvable" (requires backtracking) example:
+unsolvable :: String
+unsolvable =
+  unlines
+    [ "1..9.7..3",
+      ".8.....7.",
+      "..9...6..",
+      "..72.94..",
+      "41.....95",
+      "..85.43..",
+      "..3...7..",
+      ".5.....4.",
+      "2..8.6..9"
+    ]
 
-test3 :: String
-test3 = showMatrix $ choices test0
-
-test4 :: Matrix Choices
-test4 = prune . prune $ choices test0
-
-test5 :: IO ()
-test5 = putStrLn . showMatrix . prune . prune $ choices test0
-
-test6 :: IO ()
-test6 = putStrLn $ showMatrix $ head (expand test4)
-
--- the union of subsets of Choices in a Row
-test7 :: [[Value]]
-test7 = nub . concat . flatten $ fmap nonEmptySubsets zone2
+--Minimal sized grid (17 values) with a unique solution:
+minimal :: String
+minimal =
+  unlines
+    [ ".98......",
+      "....7....",
+      "....15...",
+      "1........",
+      "...2....9",
+      "...9.6.82",
+      ".......3.",
+      "5.1......",
+      "...4...2."
+    ]
