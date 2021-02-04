@@ -4,18 +4,25 @@
 
 module Sudoku where
 
-import Control.Applicative ( Const(getConst), Alternative((<|>)) )
+import Control.Applicative (Alternative ((<|>)), Const (getConst))
 import Control.Monad.State
-    ( evalStateT, MonadState(put, get), MonadTrans(lift), StateT )
-import Data.Char ( digitToInt )
+  ( MonadState (get, put),
+    MonadTrans (lift),
+    StateT,
+    evalStateT,
+  )
+import Data.Char (digitToInt)
+import Data.Foldable (Foldable (fold))
 import Data.Functor (($>))
-import Data.List ( foldl', (\\), nub, mapAccumL )
-import Data.Monoid ( Sum(Sum, getSum) )
+import Data.List (foldl', mapAccumL, nub, (\\))
+import Data.Monoid (Sum (Sum, getSum))
 import FunctorCombo.Functor
-    ( unO, type (:.)(..), Id(..), type (:*:)(..) )
-import FunctorCombo.ZipperFix ( Zipper )
-import NanoParsec ( Parser(parse), char, spaces, digit )
-import Data.Foldable ( Foldable(fold) )
+  ( Id (..),
+    unO,
+    type (:*:) (..),
+    type (:.) (..),
+  )
+import NanoParsec (Parser (parse), char, digit, spaces)
 
 main :: IO ()
 main = do
@@ -25,41 +32,38 @@ main = do
   putStrLn $ solve5 diabolical
   putStrLn $ solve5 unsolvable
   putStrLn $ solve5 minimal
+  putStrLn $ solve5 nefarious
 
--- Basic declarations
+-- Basic types
+
 type Triple = Id :*: Id :*: Id
 
+type Zone = Triple :. Triple  -- row, column or box
+
 pattern Tr :: a -> a -> a -> (:*:) (Id :*: Id) Id a
-pattern Tr a b c = (Id a :*: Id b) :*: Id c
+pattern Tr a b c = Id a :*: Id b :*: Id c
 
-type Row = Triple :. Triple
 
+-- This representation of Suduko grids uses the funcor kit rather than lists
 type Grid = Matrix Value
 
 type Matrix = Row :. Row
+
+type Row = Zone
 
 type Value = Char
 
 type Choices = [Value]
 
-type Zip = Zipper Row
+
+-- Pretty printing
 
 showValue :: Value -> Char
 showValue = id
 
 showChoices :: Choices -> String
 --showChoices vs = '[' : vs ++ replicate (9 - length vs) ' ' ++ "]"
-showChoices xs =
-  (++ "]")
-    . Data.List.foldl'
-      ( \acc x ->
-          acc
-            ++ if x `elem` xs
-              then [x]
-              else " "
-      )
-      "["
-    $ ['1' .. '9']
+showChoices xs = (++ "]") . foldl' (\acc x -> acc ++ if x `elem` xs then [x] else " ") "[" $ ['1' .. '9']
 
 showTriple :: Triple Choices -> String
 showTriple (Tr a b c) = showChoices a ++ showChoices b ++ showChoices c
@@ -101,14 +105,15 @@ instance (Display (f (g a))) => Display ((f :. g) a) where
 instance (Display (f a), Display (g a)) => Display ((f :*: g) a) where
   display (f :*: g) = display f <> display g
 
---
--- Basic definitions
+
+-- Helper functions
+
 values :: [Value]
 values = ['1' .. '9']
 
--- Some formats use 0, others '.', for blanks
-blank :: Value -> Bool
-blank x = x == '0' || x == '.'
+-- Some formats use 0, others '.', for empties
+empty :: Value -> Bool
+empty x = x == '0' || x == '.'
 
 single :: [a] -> Bool
 single [_] = True
@@ -122,17 +127,19 @@ treble :: [a] -> Bool
 treble [_, _, _] = True
 treble _ = False
 
+-- Newtype coercion
+newly :: (g1 (f1 a1) -> g2 (f2 a2)) -> (:.) g1 f1 a1 -> (:.) g2 f2 a2
+newly f = O . f . unO
+
 -- Extracting rows, columns and boxes
 rows :: Matrix a -> Matrix a
 rows = id
 
 cols :: Matrix a -> Matrix a
--- cols = newly sequenceA
 cols = newly sequenceA
 
 boxs :: Matrix a -> Matrix a
---boxMatrix = newly (fmap O . newly (fmap sequenceA) . fmap unO)
-boxs = O . fmap O . O . fmap sequenceA . unO . fmap unO . unO
+boxs = newly (fmap O . newly (fmap sequenceA) . fmap unO)
 
 -- Parsing
 pboard :: Parser Grid
@@ -142,11 +149,10 @@ pcell :: Parser Value
 pcell = spaces *> (digit <|> (char '.' $> '0')) <* spaces
 
 parseBoard :: String -> Grid
-parseBoard = fst . head . parse pboard
+parseBoard s = b
+  where
+    [(b, _)] = parse pboard s
 
--- Newtype coercion
-newly :: (g1 (f1 a1) -> g2 (f2 a2)) -> (:.) g1 f1 a1 -> (:.) g2 f2 a2
-newly f = O . f . unO
 
 ---------------
 --
@@ -188,8 +194,8 @@ choices :: Grid -> Matrix Choices
 choices = fmap choice
   where
     choice v =
-      if blank v
-        then values
+      if empty v
+        then values -- 1-9
         else [v]
 
 occurrences :: Foldable f => Choices -> f Choices -> Int
@@ -233,7 +239,7 @@ cp :: Matrix Choices -> [Grid]
 cp = sequenceA
 
 collapse :: Matrix [a] -> [Matrix a]
-collapse = sequenceA -- could be just collapse
+collapse = sequenceA 
 
 solve :: Grid -> [Grid]
 solve = filter valid . collapse . choices
@@ -334,7 +340,7 @@ void :: Matrix Choices -> Bool
 void = any null
 
 safe :: Matrix Choices -> Bool
-safe t = consistent (rows t) && consistent (cols t) && consistent (boxs t)
+safe cm = consistent (rows cm) && consistent (cols cm) && consistent (boxs cm)
 
 consistent :: Matrix Choices -> Bool
 consistent = and . fmap consistentRow . unO
@@ -473,4 +479,17 @@ minimal =
       ".......3.",
       "5.1......",
       "...4...2."
+    ]
+nefarious :: String
+nefarious =
+  unlines
+    [ "....6..8.",
+      ".2.......",
+      "..1......",
+      ".7....1.2",
+      "5...3....",
+      "......4..",
+      "..42.1...",
+      "3..7..6..",
+      ".......5."
     ]

@@ -1,113 +1,92 @@
-cabal-version:       2.0
-name:                Sudoku
-version:             0.0.0
-synopsis:            See README for more info
-description:         See README for more info
-homepage:            https://github.com/jrp2014/Sudoku
-bug-reports:         https://github.com/jrp2014/Sudoku/issues
-license:             MIT
-license-file:        LICENSE
-author:              jrp2014
-maintainer:          jrp@dial.pipex.com
-copyright:           2019 jrp2014
-build-type:          Simple
-extra-doc-files:     README.md
-                   , CHANGELOG.md
-tested-with:         GHC == 8.6.4, GHC == 8.6.5
+cabal-version:   2.0
+name:            Sudoku
+version:         0.0.0
+synopsis:        See README for more info
+description:     See README for more info
+homepage:        https://github.com/jrp2014/Sudoku
+bug-reports:     https://github.com/jrp2014/Sudoku/issues
+license:         MIT
+license-file:    LICENSE
+author:          jrp2014
+maintainer:      jrp
+copyright:       2019 jrp2014
+build-type:      Simple
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+
+tested-with:     GHC ==8.6.4 || ==8.6.5 || ==8.10.3
 
 source-repository head
-  type:                git
-  location:            https://github.com/jrp2014/Sudoku.git
+  type:     git
+  location: https://github.com/jrp2014/Sudoku.git
 
 library
-  hs-source-dirs:      src
-  exposed-modules:     Sudoku, NanoParsec
-                       
+  hs-source-dirs:   src
+  exposed-modules:
+    NanoParsec
+    Sudoku
 
-  build-depends:       base >= 4.13.0.0
-                     , functor-combo
-                     , mtl
-                     
+  build-depends:
+      base           >=4.13.0.0
+    , functor-combo
+    , mtl
 
-  ghc-options:         -Wall
-                       -Wincomplete-uni-patterns
-                       -Wincomplete-record-updates
-                       -Wcompat
-                       -Widentities
-                       -Wredundant-constraints
-                       -fhide-source-paths
-                       -Wmissing-export-lists
-                       -Wpartial-fields
+  ghc-options:
+    -O2 -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
+    -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
+    -Wmissing-export-lists -Wpartial-fields -Wunused-packages
+    -fwrite-ide-info -hiedir=.hie
 
-  default-language:    Haskell2010
+  default-language: Haskell2010
 
 executable Sudoku
-  hs-source-dirs:      app
-  main-is:             Main.hs
+  hs-source-dirs:   app
+  main-is:          Main.hs
+  build-depends:
+      base    >=4.13.0.0
+    , Sudoku
 
-  build-depends:       base >= 4.13.0.0
-                     , Sudoku
+  ghc-options:
+    -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
+    -Wincomplete-uni-patterns -Wincomplete-record-updates -Wcompat
+    -Widentities -Wredundant-constraints -fhide-source-paths
+    -Wmissing-export-lists -Wpartial-fields -Wunused-packages
+    -fwrite-ide-info -hiedir=.hie
 
-  ghc-options:         -Wall
-                       -threaded
-                       -rtsopts
-                       -with-rtsopts=-N
-                       -Wincomplete-uni-patterns
-                       -Wincomplete-record-updates
-                       -Wcompat
-                       -Widentities
-                       -Wredundant-constraints
-                       -fhide-source-paths
-                       -Wmissing-export-lists
-                       -Wpartial-fields
-
-  default-language:    Haskell2010
+  default-language: Haskell2010
 
 test-suite Sudoku-test
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Spec.hs
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   test
+  main-is:          Spec.hs
+  build-depends:
+      base    >=4.13.0.0
+    , Sudoku
 
-  build-depends:       base >= 4.13.0.0
-                     , Sudoku
-                     
+  ghc-options:
+    -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
+    -Wincomplete-uni-patterns -Wincomplete-record-updates -Wcompat
+    -Widentities -Wredundant-constraints -fhide-source-paths
+    -Wmissing-export-lists -Wpartial-fields -Wunused-packages
+    -fwrite-ide-info -hiedir=.hie
 
-  ghc-options:         -Wall
-                       -threaded
-                       -rtsopts
-                       -with-rtsopts=-N
-                       -Wincomplete-uni-patterns
-                       -Wincomplete-record-updates
-                       -Wcompat
-                       -Widentities
-                       -Wredundant-constraints
-                       -fhide-source-paths
-                       -Wmissing-export-lists
-                       -Wpartial-fields
-
-  default-language:    Haskell2010
+  default-language: Haskell2010
 
 benchmark Sudoku-benchmark
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      benchmark
-  main-is:             Main.hs
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   benchmark
+  main-is:          Main.hs
+  build-depends:
+      base    >=4.13.0.0
+    , gauge
+    , Sudoku
 
-  build-depends:       base >= 4.13.0.0
-                     , gauge
-                     , Sudoku
-                     
+  ghc-options:
+    -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
+    -Wincomplete-uni-patterns -Wincomplete-record-updates -Wcompat
+    -Widentities -Wredundant-constraints -fhide-source-paths
+    -Wmissing-export-lists -Wpartial-fields -Wunused-packages
+    -fwrite-ide-info -hiedir=.hie
 
-  ghc-options:         -Wall
-                       -threaded
-                       -rtsopts
-                       -with-rtsopts=-N
-                       -Wincomplete-uni-patterns
-                       -Wincomplete-record-updates
-                       -Wcompat
-                       -Widentities
-                       -Wredundant-constraints
-                       -fhide-source-paths
-                       -Wmissing-export-lists
-                       -Wpartial-fields
-
-  default-language:    Haskell2010
+  default-language: Haskell2010
