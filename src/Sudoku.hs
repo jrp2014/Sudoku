@@ -354,6 +354,7 @@ blocked m = Sudoku.void m || not (safe m)
 -- Makng choices one at a time
 solve4 :: Grid -> [Grid]
 solve4 = search . prune . choices
+--solve4 = search . prune . prune2 . prune3 . choices
 
 -- Use solve4 to solve the given board
 solve5 :: String -> String

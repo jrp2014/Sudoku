@@ -27,10 +27,12 @@ library
     NanoParsec
     Sudoku
 
+  -- functor-combo uses type-unary which doesn't compile with newtype-generics 0.6
   build-depends:
-      base           >=4.13.0.0
+      base              >=4.13.0.0
     , functor-combo
     , mtl
+    , newtype-generics  <0.6
 
   ghc-options:
     -O2 -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
