@@ -1,10 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeOperators #-}
+-- helps a bit {-# LANGUAGE StrictData #-}
 
 module Sudoku where
 
-import Control.Applicative (Alternative ((<|>)), Const (getConst))
+import Control.Applicative (Alternative ((<|>)))
 import Control.Monad.State
   ( MonadState (get, put),
     MonadTrans (lift),
@@ -21,9 +22,11 @@ import FunctorCombo.Functor
     unO,
     type (:*:) (..),
     type (:.) (..),
+    Const (getConst),
   )
 import NanoParsec (Parser (parse), char, digit, spaces)
 
+-- For testing only.  The real main is in app/Main.hs
 main :: IO ()
 main = do
   putStrLn $ solve5 tryThis
@@ -31,8 +34,8 @@ main = do
   putStrLn $ solve5 gentle
   putStrLn $ solve5 diabolical
   putStrLn $ solve5 unsolvable
-  putStrLn $ solve5 minimal
-  putStrLn $ solve5 nefarious
+--  putStrLn $ solve5 minimal
+--  putStrLn $ solve5 nefarious
 
 -- Basic types
 

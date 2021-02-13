@@ -17,6 +17,7 @@ extra-doc-files:
 
 tested-with:     GHC ==8.6.4 || ==8.6.5 || ==8.10.3
 
+
 source-repository head
   type:     git
   location: https://github.com/jrp2014/Sudoku.git
@@ -26,6 +27,7 @@ library
   exposed-modules:
     NanoParsec
     Sudoku
+    Hutton
 
   -- functor-combo uses type-unary which doesn't compile with newtype-generics 0.6
   build-depends:
@@ -81,7 +83,7 @@ benchmark Sudoku-benchmark
   main-is:          Main.hs
   build-depends:
       base    >=4.13.0.0
-    , gauge
+    , criterion
     , Sudoku
 
   ghc-options:
