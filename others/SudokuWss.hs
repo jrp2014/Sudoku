@@ -7,7 +7,7 @@ module Main where
 import Data.List
 import Control.Concurrent.STM
 import Control.Concurrent
-import Control.Monad
+import Control.Monad hiding (void)
 
 type Grid             = Matrix Value
 type Matrix a         = [Row a]
