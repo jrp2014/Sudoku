@@ -17,7 +17,6 @@ extra-doc-files:
 
 tested-with:     GHC ==8.6.4 || ==8.6.5 || ==8.10.3
 
-
 source-repository head
   type:     git
   location: https://github.com/jrp2014/Sudoku.git
@@ -25,13 +24,16 @@ source-repository head
 library
   hs-source-dirs:   src
   exposed-modules:
-    NanoParsec
-    Sudoku
     Hutton
+    NanoParsec
+    Norvig
+    Sudoku
+    Types4
 
   -- functor-combo uses type-unary which doesn't compile with newtype-generics 0.6
   build-depends:
-      base              >=4.13.0.0
+      array
+    , base              >=4.13.0.0
     , functor-combo
     , mtl
     , newtype-generics  <0.6
@@ -82,7 +84,7 @@ benchmark Sudoku-benchmark
   hs-source-dirs:   benchmark
   main-is:          Main.hs
   build-depends:
-      base    >=4.13.0.0
+      base       >=4.13.0.0
     , criterion
     , Sudoku
 

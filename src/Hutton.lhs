@@ -206,7 +206,7 @@ is valid if there are no duplicates in any row, column or box:
 >
 > nodups                :: Eq a => [a] -> Bool
 > nodups []             =  True
-> nodups (x:xs)         =  not (elem x xs) && nodups xs
+> nodups (x:xs)         =  x `notElem` xs && nodups xs
 
 
 A basic solver
@@ -376,8 +376,8 @@ it only collapses the first square with more than one choice:
 > expand m              =
 >    [rows1 ++ [row1 ++ [c] : row2] ++ rows2 | c <- cs]
 >    where
->       (rows1,row:rows2) = break (any (not . single)) m
->       (row1,cs:row2)    = break (not . single) row
+>       (rows1,row:rows2) = span (all single) m
+>       (row1,cs:row2)    = span single row
 
 Note that there is no longer any need to check for valid grids at 
 the end, because the process by which solutions are constructed 
