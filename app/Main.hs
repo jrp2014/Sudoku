@@ -1,7 +1,7 @@
 module Main where
 
 --import Sudoku hiding (main)
-import Types4  hiding (main)
+import Generics  hiding (main)
 
 
 main :: IO ()

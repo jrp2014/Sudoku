@@ -24,6 +24,7 @@ source-repository head
 library
   hs-source-dirs:   src
   exposed-modules:
+    Generics
     Hutton
     NanoParsec
     Norvig
@@ -36,7 +37,8 @@ library
     , base              >=4.13.0.0
     , functor-combo
     , mtl
-    , newtype-generics  <0.6
+    , newtype-generics < 0.6
+--    , newtype
 
   ghc-options:
     -O2 -Wall -Wincomplete-uni-patterns -Wincomplete-record-updates
