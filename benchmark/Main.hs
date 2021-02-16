@@ -1,33 +1,34 @@
 module Main
-  ( main
-  ) where
+  ( main,
+  )
+where
 
-import           Criterion.Main
-import           Data.Maybe
+import Criterion.Main
+import Data.Maybe
+import qualified Generics
 import qualified Hutton
 import qualified Norvig
 import qualified Sudoku
 import qualified Types4
-import qualified Generics
-
-bms solver =
-  [ bench "tryThis" $ nf solver Sudoku.tryThis
-  , bench "easy" $ nf solver Sudoku.easy
-  , bench "gentle" $ nf solver Sudoku.gentle
-  , bench "diabolical" $ nf solver Sudoku.diabolical
-  , bench "unsolvable" $ nf solver Sudoku.unsolvable
-  , bench "minimal" $ nf solver Sudoku.minimal {-,
-                                               bench "nefarious" $ nf solver Sudoku.nefarious -}
-  ]
 
 bmGroups :: [Benchmark]
 bmGroups =
-  [ bgroup "Sudoku.solve5" $ bms Sudoku.solve5
-  , bgroup "Generics.solve5" $ bms Types4.solve5
-  , bgroup "Types4.solve5" $ bms Types4.solve5
-  , bgroup "Hutton.solve4" $ bms (Hutton.solve4 . lines)
-  , bgroup "Norvig.solve4"
-    $ bms (maybe "Failed to solve" Norvig.gridToString . Norvig.solve)
+  [ bgroup "tryThis" $ bms Sudoku.tryThis,
+    bgroup "easy" $ bms Sudoku.easy,
+    bgroup "gentle" $ bms Sudoku.gentle,
+    bgroup "diabolical" $ bms Sudoku.diabolical,
+    bgroup "unsolvable" $ bms Sudoku.unsolvable,
+    bgroup "minimal" $ bms Sudoku.minimal {-,
+                                               bgroup "nefarious" $ bms Sudoku.nefarious -}
+  ]
+
+bms :: String -> [Benchmark]
+bms puzzle =
+  [ bench "Sudoku.solve5" $ nf Sudoku.solve5 puzzle,
+    bench "Generics.solve5" $ nf Types4.solve5 puzzle,
+    bench "Types4.solve5" $ nf Types4.solve5 puzzle,
+    bench "Hutton.solve4" $ nf (Hutton.solve4 . lines) puzzle,
+    bench "Norvig.solve4" $ nf (maybe "Failed to solve" Norvig.gridToString . Norvig.solve) puzzle
   ]
 
 main :: IO ()
