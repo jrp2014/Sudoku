@@ -1,8 +1,6 @@
-{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -16,6 +14,12 @@
     -dsuppress-type-applications
     -dsuppress-uniques
     -dsuppress-module-prefixes -}
+
+
+-- Like Types 4, but using GHC (Generics) to generate many of the instances and
+-- some of the Functor Kit
+-- We could also replace some of the Newtype giggery pokery with
+-- @Control.NewType@ machinery.
 
 {-----------------------------------------------------------------------------}
 module Generics where
@@ -82,21 +86,6 @@ newtype K a x = K {unK :: a}
   deriving stock (Functor, Foldable, Traversable, Generic)
   deriving newtype (Show, Semigroup, Monoid)
 
-
-{-
-data (f :*: g) x = f x :*: g x 
-  deriving stock (Show, Functor, Foldable, Traversable, Generic)
-
-
-data (f :+: g) x = L (f x) | R (g x) deriving (Show, Generic)
-
-newtype (f :.: g) x = C {unC :: f (g x)}
-  deriving stock (Functor, Foldable, Traversable, Generic)
-  deriving newtype (Show, Semigroup, Monoid)
--}
-
-
-
 instance Applicative I where
   pure = I
   I f <*> I s = I (f s)
@@ -104,13 +93,6 @@ instance Applicative I where
 instance Monoid a => Applicative (K a) where
   pure _x = K mempty
   K f <*> K s = K (mappend f s)
-
-{-
-instance (Applicative f, Applicative g) => Applicative (f :.: g) where
-  pure = C . pure . pure
-  C fgf <*> C fgs = C ((<*>) <$> fgf <*> fgs)
--}
-
 
 {---------------------------------------------------------------------}
 -- Newtype piggery-jokery
@@ -168,17 +150,17 @@ instance Newtype All where
 {---------------------------------------------------------------------}
 -- triples of triples, and their transposes
 
-type Triple = I :*: I :*: I
+type Triple = (I :*: I) :*: I
 
---pattern Tr :: x -> x -> x -> (:*:) (I :*: I) I x
---pattern Tr a b c = I a :*: I b :*: I c
+pattern Tr :: x -> x -> x -> (:*:) (I :*: I) I x
+pattern Tr a b c = (I a :*: I b) :*: I c
 
 type Zone = Triple :.: Triple
 
 -- what's for free?
 
---zone :: Zone Char
---zone = C (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'i'))
+zone :: Zone Char
+zone =  Comp1 (Tr (Tr 'a' 'b' 'c') (Tr 'd' 'e' 'f') (Tr 'g' 'h' 'i'))
 
 {-----------------------------------------------------------------------}
 
@@ -196,7 +178,7 @@ boxBoard :: Board c -> Board c
 boxBoard = newly (fmap Comp1 . newly (fmap sequenceA) . fmap unComp1)
 
 crush :: (Traversable f, Monoid b) => (a -> b) -> f a -> b
-crush f = unK . traverse (K . f) -- foldMap
+crush = foldMap -- unK . traverse (K . f) -- foldMap
 
 reduce :: (Traversable t, Monoid o) => t o -> o
 reduce = fold -- foldMap id -- fold / cf: mconcat
