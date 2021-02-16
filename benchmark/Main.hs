@@ -8,6 +8,7 @@ import qualified Hutton
 import qualified Norvig
 import qualified Sudoku
 import qualified Types4
+import qualified Generics
 
 bms solver =
   [ bench "tryThis" $ nf solver Sudoku.tryThis
@@ -22,6 +23,7 @@ bms solver =
 bmGroups :: [Benchmark]
 bmGroups =
   [ bgroup "Sudoku.solve5" $ bms Sudoku.solve5
+  , bgroup "Generics.solve5" $ bms Types4.solve5
   , bgroup "Types4.solve5" $ bms Types4.solve5
   , bgroup "Hutton.solve4" $ bms (Hutton.solve4 . lines)
   , bgroup "Norvig.solve4"
