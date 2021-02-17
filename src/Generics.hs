@@ -39,6 +39,8 @@ import Data.Foldable (Foldable (fold))
 import Data.Functor (($>))
 import Data.List (mapAccumL, nub, (\\))
 import Data.Monoid (All (..), Any (..), Product (..), Sum (..))
+import Data.Functor.Identity
+import Data.Functor.Const
 import GHC.Generics
 --import Control.Newtype
 
@@ -78,6 +80,7 @@ type Cell = Maybe Int
 {---------------------------------------------------------------------}
 -- the functor kit
 
+{-
 newtype I x = I x 
   deriving stock (Functor, Foldable, Traversable, Generic)
   deriving newtype (Show, Semigroup, Monoid)
@@ -93,6 +96,7 @@ instance Applicative I where
 instance Monoid a => Applicative (K a) where
   pure _x = K mempty
   K f <*> K s = K (mappend f s)
+-}
 
 {---------------------------------------------------------------------}
 -- Newtype piggery-jokery
@@ -116,6 +120,7 @@ instance Newtype ((f :.: g) x) where
   pack = Comp1
   unpack = unComp1
 
+{-
 instance Newtype (K a x) where
   type Old (K a x) = a
   pack = K
@@ -125,6 +130,7 @@ instance Newtype (I x) where
   type Old (I x) = x
   pack = I
   unpack (I x) = x
+-}
 
 instance Newtype (Product a) where
   type Old (Product a) = a
@@ -150,10 +156,10 @@ instance Newtype All where
 {---------------------------------------------------------------------}
 -- triples of triples, and their transposes
 
-type Triple = (I :*: I) :*: I
+type Triple = (Identity :*: Identity) :*: Identity
 
-pattern Tr :: x -> x -> x -> (:*:) (I :*: I) I x
-pattern Tr a b c = (I a :*: I b) :*: I c
+pattern Tr :: x -> x -> x -> (:*:) (Identity :*: Identity) Identity x
+pattern Tr a b c = (Identity a :*: Identity b) :*: Identity c
 
 type Zone = Triple :.: Triple
 
@@ -232,11 +238,11 @@ instance Display Int where
 instance Display Char where
   display c = show (digitToInt c)
 
-instance Display a => Display (I a) where
-  display (I x) = display x
+instance Display a => Display (Identity a) where
+  display (Identity x) = display x
 
-instance Display a => Display (K a x) where
-  display k = display (K k)
+instance Display a => Display (Const a x) where
+  display (Const k) = display k
 
 instance (Display (f (g a))) => Display ((f :.: g) a) where
   display = (<> "\n") . display . unComp1
